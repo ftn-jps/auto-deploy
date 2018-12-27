@@ -1,0 +1,88 @@
+#!/bin/bash
+# auto-deploy - auto clone and deploy repositories
+# Copyright (C) 2018  Bojan Stipic
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+trap 'kill $(jobs -pr) &> /dev/null' SIGINT SIGTERM EXIT
+
+URL_PREFIX="git@github.com:ftn-jps"
+TARGET_DIR="target"
+LOG_DIR="log"
+LOG_SUFFIX=".log"
+ACCENT_COLOR='\e[38;5;203m'
+DEFAULT_COLOR='\e[00m'
+color-echo()
+{
+	echo -e "$ACCENT_COLOR" "$@" "$DEFAULT_COLOR"
+}
+
+# Clone repositories
+clone()
+{
+	if [[ ! -e "$1" ]]; then
+		color-echo "Cloning $1 repository:"
+		git clone "$URL_PREFIX/$1"
+	fi
+}
+
+(
+	mkdir -p "$TARGET_DIR"
+	cd "$TARGET_DIR" || exit
+	color-echo '---- CLONING REPOSITORIES ----'
+	clone "payment-gateway"
+	clone "payment-gateway-frontend"
+	clone "bank"
+	clone "bank-frontend"
+	clone "payment-card-center"
+)
+
+# Update existing repositories
+color-echo '---- UPDATING REPOSITORIES ----'
+for app in "$TARGET_DIR"/*; do
+	if [[ -d "$app" ]]; then
+		color-echo "Updating $app repository:"
+		git -C "$app" pull
+	fi
+done
+
+# Start the servers
+color-echo '---- STARTING SERVERS... ----'
+color-echo "Follow the logs with \`tail -f $LOG_DIR/*\`"
+mkdir -p "$LOG_DIR"
+for app in "$TARGET_DIR"/*; do
+	if [[ -d "$app" ]]; then
+		log_path="$LOG_DIR/${app#*/}$LOG_SUFFIX"
+		log_path_abs="$PWD/$log_path"
+		(
+			cd "$app" || exit
+			echo "${app#*/} is starting... (output redirected to $log_path)"
+			if [[ $app =~ .*-frontend ]]; then
+				npm install &> "$log_path_abs" &&
+					npm start &>> "$log_path_abs"
+			else
+				./mvnw spring-boot:run &> "$log_path_abs"
+			fi
+		) &
+		(
+			while sleep 2; do
+				port="$(grep -E 'Tomcat started on port|localhost:' "$log_path_abs" | \
+					sed -E 's/.*(port\(s\): |localhost:)([0-9]+).*/\2/')"
+				[[ $port ]] && echo "${app#*/} is listening on port: $port" && exit
+			done
+		) &
+	fi
+done
+
+wait
