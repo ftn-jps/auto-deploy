@@ -31,9 +31,12 @@ color-echo()
 # Clone repositories
 clone()
 {
-	if [[ ! -e "$1" ]]; then
-		color-echo "Cloning $1 repository:"
-		git clone "$URL_PREFIX/$1"
+	local destination="$2"
+	[[ ! "$destination" ]] && destination="$1"
+
+	if [[ ! -e "$destination" ]]; then
+		color-echo "Cloning $destination repository:"
+		git clone "$URL_PREFIX/$1" "$destination"
 	fi
 }
 
@@ -45,6 +48,8 @@ clone()
 	clone "payment-gateway-frontend"
 	clone "bank"
 	clone "bank-frontend"
+	clone "bank" "bank-2"
+	git -C "bank-2" apply "banktwo.patch" &> /dev/null
 	clone "payment-card-center"
 )
 
