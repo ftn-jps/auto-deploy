@@ -70,7 +70,7 @@ for app in "$TARGET_DIR"/*; do
 			echo "${app#*/} is starting... (output redirected to $log_path)"
 			if [[ $app =~ .*-frontend ]]; then
 				npm install &> "$log_path_abs" &&
-					npm start &>> "$log_path_abs"
+					npm start -- --ssl true &>> "$log_path_abs"
 			else
 				./mvnw spring-boot:run &> "$log_path_abs"
 			fi
