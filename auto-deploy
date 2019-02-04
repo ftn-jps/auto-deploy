@@ -50,6 +50,8 @@ clone()
 	clone "bank-frontend"
 	clone "bank" "bank-2"
 	git -C "bank-2" apply "banktwo.patch" &> /dev/null
+	clone "bank-frontend" "bank-frontend-2"
+	git -C "bank-frontend-2" apply "banktwo.patch" &> /dev/null
 	clone "payment-card-center"
 )
 
