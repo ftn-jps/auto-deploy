@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-trap 'kill $(jobs -pr) &> /dev/null' SIGINT SIGTERM EXIT
+trap 'kill $(jobs -p) &> /dev/null' INT TERM EXIT
 
 URL_PREFIX="git@github.com:ftn-jps"
 TARGET_DIR="target"
